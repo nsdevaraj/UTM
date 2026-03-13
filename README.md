@@ -37,6 +37,40 @@ UTM SE ("slow edition") uses a [threaded interpreter][3] which performs better t
 
 To optimize for size and build times, only the following architectures are included in UTM SE: ARM, PPC, RISC-V, and x86 (all with both 32-bit and 64-bit variants).
 
+## PicoClaw Integration
+
+This fork includes a bundled [PicoClaw](https://github.com/sipeed/picoclaw) Linux VM — an ultra-lightweight AI assistant (~10MB RAM) running inside an Alpine Linux ARM64 guest. PicoClaw runs in UTM SE on iOS without requiring a jailbreak.
+
+### Building the PicoClaw VM Image
+
+Prerequisites: Docker with buildx support, `qemu-img` (`brew install qemu` on macOS).
+
+```bash
+# Build the Alpine ARM64 disk image with picoclaw pre-installed
+./scripts/build_picoclaw_image.sh
+
+# Copy the image into the VM bundle
+cp scripts/resources/picoclaw-alpine.qcow2 "Bundled VMs/PicoClaw Linux.utm/"
+```
+
+### Building UTM with the Bundled VM
+
+Build UTM SE for iOS as usual — the `Bundled VMs/PicoClaw Linux.utm/` bundle (containing `config.plist` and `picoclaw-alpine.qcow2`) will be included in the app:
+
+```bash
+./scripts/build_utm.sh -k iphoneos -s iOS-SE -a arm64 -o output/
+./scripts/package.sh ipa-se output/UTM.xcarchive output/
+```
+
+### Using PicoClaw
+
+Once the VM boots in UTM, log in as `root` (no password) and run:
+
+```
+picoclaw onboard    # First-time setup (configure API keys)
+picoclaw            # Start the AI assistant
+```
+
 ## Install
 
 UTM (SE) for iOS: https://getutm.app/install/

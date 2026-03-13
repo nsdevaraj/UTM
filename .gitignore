@@ -71,3 +71,8 @@ build*/
 sysroot*/
 .DS_Store
 CodeSigning.xcconfig
+
+# PicoClaw VM disk images (built by scripts/build_picoclaw_image.sh)
+*.qcow2
+scripts/resources/picoclaw-rootfs.tar
+scripts/resources/picoclaw-alpine.raw

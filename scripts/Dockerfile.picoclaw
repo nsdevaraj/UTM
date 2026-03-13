@@ -1,0 +1,49 @@
+FROM --platform=linux/arm64 alpine:3.19 AS builder
+
+# Install base system packages for a bootable system
+RUN apk add --no-cache \
+    openrc \
+    alpine-base \
+    dhcpcd \
+    openssh \
+    curl \
+    ca-certificates
+
+# Enable essential services
+RUN rc-update add devfs sysinit && \
+    rc-update add dmesg sysinit && \
+    rc-update add mdev sysinit && \
+    rc-update add bootmisc boot && \
+    rc-update add hostname boot && \
+    rc-update add syslog boot && \
+    rc-update add networking boot && \
+    rc-update add dhcpcd default && \
+    rc-update add local default
+
+# Configure serial console for UTM terminal mode
+RUN sed -i 's/^#ttyS0/ttyS0/' /etc/inittab || true && \
+    echo "ttyS0::respawn:/sbin/getty -L 115200 ttyS0 vt100" >> /etc/inittab
+
+# Set root password (empty for first boot, user should change)
+RUN echo "root:" | chpasswd
+
+# Configure networking
+RUN printf 'auto lo\niface lo inet loopback\n\nauto eth0\niface eth0 inet dhcp\n' > /etc/network/interfaces
+
+# Download and install picoclaw
+RUN wget -qO- https://github.com/sipeed/picoclaw/releases/download/v0.2.2/picoclaw_Linux_arm64.tar.gz | tar -xz -C /tmp && \
+    mv /tmp/picoclaw /usr/local/bin/picoclaw && \
+    chmod +x /usr/local/bin/picoclaw
+
+# Create welcome banner
+RUN printf '#!/bin/sh\nexport PATH=$PATH:/usr/local/bin\necho "==================================="\necho "  PicoClaw AI Assistant (UTM/iOS)"\necho "==================================="\necho "Run: picoclaw onboard  (first setup)"\necho "Run: picoclaw          (start)"\necho ""\n' > /etc/profile.d/picoclaw.sh && \
+    chmod +x /etc/profile.d/picoclaw.sh
+
+# Create .env template
+RUN printf '# PicoClaw Configuration\n# Add your API key below:\nOPENAI_API_KEY=\nANTHROPIC_API_KEY=\n' > /root/.env
+
+# Set hostname
+RUN echo "picoclaw" > /etc/hostname
+
+FROM scratch
+COPY --from=builder / /
